@@ -299,6 +299,11 @@ li.invasive-note {
 }
 .species-card .src-link:hover { text-decoration: underline; }
 .species-card.hidden { display: none; }
+.species-card.match-highlight {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
+}
+.species-card.match-highlight .sv-name { color: var(--accent); }
 .group.all-hidden { display: none; }
 
 #glossary dl.gloss-list {
@@ -3079,7 +3084,7 @@ footer.source-note {
     var q = searchInput.value.trim().toLowerCase();
     var shown = 0;
     if (!q) {
-      cards.forEach(function(c) { c.classList.remove('hidden'); });
+      cards.forEach(function(c) { c.classList.remove('hidden', 'match-highlight'); });
       groups.forEach(function(g) { g.classList.remove('all-hidden'); });
       countEl.textContent = '';
       return;
@@ -3090,19 +3095,30 @@ footer.source-note {
       c.dataset.matchTier = t;
       if (t > bestTier) bestTier = t;
     });
+    // A matching card no longer hides its siblings: whole families/grupper stay
+    // visible together so it's possible to compare the matched species against
+    // its relatives. Groups with zero matches are hidden; matches get highlighted.
     groups.forEach(function(g) {
       var groupCards = g.querySelectorAll('.species-card');
-      var anyVisible = false;
+      var anyMatch = false;
       groupCards.forEach(function(c) {
         var match = bestTier > 0 && parseInt(c.dataset.matchTier, 10) === bestTier;
-        c.classList.toggle('hidden', !match);
-        if (match) { anyVisible = true; shown++; }
+        c.classList.remove('hidden');
+        c.classList.toggle('match-highlight', match);
+        if (match) { anyMatch = true; shown++; }
       });
-      g.classList.toggle('all-hidden', !anyVisible);
+      g.classList.toggle('all-hidden', !anyMatch);
     });
-    countEl.textContent = shown + ' art(er) matchar';
+    countEl.textContent = shown + ' art(er) matchar – hela familjen/gruppen visas, tryck Enter för att hoppa dit';
   }
   searchInput.addEventListener('input', filterSpecies);
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    var first = document.querySelector('.species-card.match-highlight');
+    if (first) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
 
   document.addEventListener('click', function(e) {
     var term = e.target.closest ? e.target.closest('.gloss-term') : null;
